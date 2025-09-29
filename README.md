@@ -43,15 +43,15 @@ curl http://localhost:9102/metrics
 ```mermaid
 flowchart TD
     subgraph Node
-      A[Applications in Pods] -->|Write logs| B[/pang/logs/<namespace>/<pod>/*.log/]
+      A[Applications in Pods] -->|Write logs| B["Log Files<br/>/pang/logs/namespace/pod/*.log"]
       B --> C[Rotator DaemonSet Pod]
-      C -->|Rotate + Compress| D[Rotated Files (.1, .2.gz)]
+      C -->|Rotate + Compress| D["Rotated Files<br/>.1, .2.gz"]
       C -->|Metrics Exporter| E[Prometheus]
-      C -->|Health Endpoints| F[Liveness / Readiness Probes]
+      C -->|Health Endpoints| F["Liveness/Readiness<br/>Probes"]
     end
 
     subgraph Cluster
-      C --> G[Central Monitoring (Grafana/Loki)]
+      C --> G["Central Monitoring<br/>(Grafana/Loki)"]
     end
 
     style A fill:#d1e8ff,stroke:#0366d6
@@ -316,7 +316,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ```mermaid
 sequenceDiagram
     participant App as Application Pod
-    participant FS as /pang/logs
+    participant FS as Log Files
     participant Rot as Rotator DaemonSet
     participant Pol as Policy Engine
     participant Met as Prometheus
