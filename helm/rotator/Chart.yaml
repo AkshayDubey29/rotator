@@ -1,0 +1,16 @@
+apiVersion: v2
+name: rotator
+description: Namespace-aware log rotation DaemonSet for /pang/logs
+type: application
+version: 0.1.0
+appVersion: "v1.0.0"
+home: https://github.com/tapasyadubey/log-rotate-util
+maintainers:
+  - name: Your Name
+    email: your.email@company.com
+keywords:
+  - logging
+  - rotation
+  - daemonset
+  - observability
+

@@ -1,0 +1,128 @@
+rotator:
+  image:
+    repository: your-registry/rotator  # Update with your registry
+    tag: v1.0.0
+    pullPolicy: IfNotPresent
+  
+  # Production resource configuration
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  
+  # Node placement (optional)
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+  
+  # Log rotation configuration
+  defaults:
+    discovery:
+      path: /pang/logs
+      include: ["**/*.log", "**/*.out", "**/*.jsonl"]
+      exclude: ["**/*.gz", "**/*.zip", "**/*.tmp", "**/*.idx", "**/.**", "**/*.sock", "**/*.fifo"]
+      maxDepth: 8
+    
+    policy:
+      size: 100Mi              # Rotate when file exceeds 100MB
+      age: 24h                 # Rotate files older than 24 hours
+      inactive: 6h             # Rotate inactive files after 6 hours
+      keepFiles: 5             # Keep 5 rotated files per log
+      keepDays: 7              # Keep files for 7 days maximum
+      compressAfter: 1h        # Compress rotated files after 1 hour
+      defaultMode: rename      # Use rename technique (safer)
+    
+    budgets:
+      perNamespaceBytes: 10Gi  # 10GB storage limit per namespace
+  
+  # Environment-specific overrides
+  overrides:
+    namespaces:
+      # Production namespace - frequent rotation, copytruncate for safety
+      production:
+        policy:
+          size: 50Mi
+          defaultMode: copytruncate
+          compressAfter: 30m
+        budgets:
+          perNamespaceBytes: 20Gi
+      
+      # Staging namespace - similar to production
+      staging:
+        policy:
+          size: 75Mi
+          defaultMode: copytruncate
+        budgets:
+          perNamespaceBytes: 15Gi
+      
+      # Development namespace - less aggressive rotation
+      development:
+        policy:
+          size: 200Mi
+          keepFiles: 10
+          keepDays: 14
+        budgets:
+          perNamespaceBytes: 5Gi
+      
+      # Monitoring namespace - high frequency logs
+      monitoring:
+        policy:
+          size: 25Mi
+          age: 6h
+          compressAfter: 15m
+        budgets:
+          perNamespaceBytes: 50Gi
+      
+      # Database namespace - careful rotation
+      database:
+        policy:
+          size: 500Mi
+          defaultMode: copytruncate
+          keepFiles: 10
+          keepDays: 30
+        budgets:
+          perNamespaceBytes: 100Gi
+    
+    paths:
+      # Legacy applications with specific requirements
+      - match: "/pang/logs/legacy-app/**"
+        policy:
+          defaultMode: copytruncate
+          size: 1Gi
+          keepFiles: 20
+        discovery:
+          exclude: ["**/*.tmp", "**/*.lock"]
+      
+      # High-volume microservices
+      - match: "/pang/logs/microservices/**"
+        policy:
+          size: 25Mi
+          age: 2h
+          compressAfter: 10m
+        budgets:
+          perNamespaceBytes: 30Gi
+
+# Security configuration (production-ready)
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 65534
+  runAsGroup: 65534
+  fsGroup: 65534
+
+# Monitoring configuration
+serviceMonitor:
+  enabled: false              # Set to true if Prometheus Operator is available
+  interval: 30s
+  scrapeTimeout: 10s
+
+# Priority class for important workloads
+priorityClass:
+  create: false
+  name: system-node-critical  # Use existing system priority class
+
+# Image pull secrets (if using private registry)
+# imagePullSecrets:
+#   - name: registry-secret

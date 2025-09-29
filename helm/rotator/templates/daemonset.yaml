@@ -1,0 +1,92 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: rotator
+  labels:
+    app: rotator
+    app.kubernetes.io/name: rotator
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/version: {{ .Chart.AppVersion }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+spec:
+  selector:
+    matchLabels:
+      app: rotator
+  template:
+    metadata:
+      labels:
+        app: rotator
+        app.kubernetes.io/name: rotator
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/version: {{ .Chart.AppVersion }}
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+    spec:
+      priorityClassName: {{ .Values.priorityClass.name }}
+      serviceAccountName: rotator
+      securityContext:
+        runAsNonRoot: {{ .Values.securityContext.runAsNonRoot }}
+        runAsUser: {{ .Values.securityContext.runAsUser }}
+        runAsGroup: {{ .Values.securityContext.runAsGroup }}
+        fsGroup: {{ .Values.securityContext.fsGroup }}
+      containers:
+        - name: rotator
+          image: "{{ .Values.rotator.image.repository }}:{{ .Values.rotator.image.tag }}"
+          imagePullPolicy: {{ .Values.rotator.image.pullPolicy }}
+          args: ["--config=/etc/rotator/config.yaml"]
+          env:
+            - name: GIN_MODE
+              value: release
+          ports:
+            - name: http
+              containerPort: 9102
+          resources:
+            {{- toYaml .Values.rotator.resources | nindent 12 }}
+          volumeMounts:
+            - name: logs
+              mountPath: /pang/logs
+            - name: config
+              mountPath: /etc/rotator
+              readOnly: true
+            - name: state
+              mountPath: /var/lib/rotator
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          livenessProbe:
+            httpGet:
+              path: /live
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+      {{- with .Values.rotator.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.rotator.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.rotator.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      volumes:
+        - name: logs
+          hostPath:
+            path: /pang/logs
+            type: Directory
+        - name: config
+          configMap:
+            name: rotator-config
+        - name: state
+          emptyDir: {}
+

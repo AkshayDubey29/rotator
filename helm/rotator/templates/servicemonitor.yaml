@@ -1,0 +1,16 @@
+{{- if .Values.serviceMonitor.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: rotator
+  labels:
+    app: rotator
+spec:
+  selector:
+    matchLabels:
+      app: rotator
+  endpoints:
+    - port: http
+      interval: {{ .Values.serviceMonitor.interval }}
+{{- end }}
+

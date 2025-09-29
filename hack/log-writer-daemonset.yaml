@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: demo-log-writer
+spec:
+  selector:
+    matchLabels:
+      app: demo-log-writer
+  template:
+    metadata:
+      labels:
+        app: demo-log-writer
+    spec:
+      terminationGracePeriodSeconds: 5
+      securityContext:
+        fsGroup: 65534
+      containers:
+        - name: writer
+          image: bash:5
+          command: ["/bin/sh","-c"]
+          args:
+            - |
+              set -eu
+              POD_NAME=$(cat /var/run/secrets/kubernetes.io/serviceaccount/namespace)-$HOSTNAME
+              NS=$(cat /var/run/secrets/kubernetes.io/serviceaccount/namespace)
+              mkdir -p /pang/logs/$NS/$POD_NAME
+              i=0
+              while true; do
+                echo "$(date -Is) demo log line $i" >> /pang/logs/$NS/$POD_NAME/app.log
+                i=$((i+1))
+                sleep 1
+              done
+          volumeMounts:
+            - name: logs
+              mountPath: /pang/logs
+      volumes:
+        - name: logs
+          hostPath:
+            path: /pang/logs
+            type: DirectoryOrCreate

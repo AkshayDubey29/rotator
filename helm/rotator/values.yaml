@@ -1,0 +1,75 @@
+rotator:
+  image:
+    repository: ghcr.io/your-org/rotator
+    tag: v1.0.0
+    pullPolicy: IfNotPresent
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 300m
+      memory: 256Mi
+  defaults:
+    discovery:
+      path: /pang/logs
+      include: ["**/*.log","**/*.out","**/*.jsonl"]
+      exclude: ["**/*.gz","**/*.zip","**/*.tmp","**/*.idx","**/.**","**/*.sock","**/*.fifo"]
+      maxDepth: 8
+    policy:
+      size: 100Mi
+      age: 24h
+      inactive: 6h
+      keepFiles: 5
+      keepDays: 3
+      compressAfter: 1h
+      defaultMode: rename
+    budgets:
+      perNamespaceBytes: 10Gi
+  overrides:
+    namespaces:
+      payments:
+        policy:
+          size: 50Mi
+          defaultMode: copytruncate
+        discovery:
+          include: ["**/*.log"]
+      checkout:
+        policy:
+          age: 12h
+      transportation:
+        policy:
+          keepFiles: 10
+          compressAfter: 30m
+        budgets:
+          perNamespaceBytes: 20Gi
+        discovery:
+          exclude: ["**/*.idx"]
+    paths:
+      - match: "/pang/logs/legacy-service/**"
+        policy:
+          defaultMode: copytruncate
+          size: 200Mi
+        discovery:
+          exclude: ["**/*.tmp","**/*.gz"]
+
+serviceMonitor:
+  enabled: true
+  interval: 30s
+
+priorityClassName: system-node-critical
+
+priorityClass:
+  create: false
+  name: system-node-critical
+
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 65534
+  runAsGroup: 65534
+  fsGroup: 65534
+
+

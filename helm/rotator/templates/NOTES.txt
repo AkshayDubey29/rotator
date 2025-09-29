@@ -1,0 +1,5 @@
+Rotator deployed as a DaemonSet.
+
+Metrics available on port 9102 at /metrics via Service rotator.
+Liveness: /live  Readiness: /ready
+

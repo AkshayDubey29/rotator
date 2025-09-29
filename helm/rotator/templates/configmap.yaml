@@ -1,0 +1,30 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rotator-config
+  labels:
+    app: rotator
+data:
+  config.yaml: |
+    defaults:
+      discovery:
+        path: {{ .Values.rotator.defaults.discovery.path | quote }}
+        include: {{ toJson .Values.rotator.defaults.discovery.include }}
+        exclude: {{ toJson .Values.rotator.defaults.discovery.exclude }}
+        maxDepth: {{ .Values.rotator.defaults.discovery.maxDepth }}
+      policy:
+        size: {{ .Values.rotator.defaults.policy.size | quote }}
+        age: {{ .Values.rotator.defaults.policy.age | quote }}
+        inactive: {{ .Values.rotator.defaults.policy.inactive | quote }}
+        keepFiles: {{ .Values.rotator.defaults.policy.keepFiles }}
+        keepDays: {{ .Values.rotator.defaults.policy.keepDays }}
+        compressAfter: {{ .Values.rotator.defaults.policy.compressAfter | quote }}
+        defaultMode: {{ .Values.rotator.defaults.policy.defaultMode | quote }}
+      budgets:
+        perNamespaceBytes: {{ .Values.rotator.defaults.budgets.perNamespaceBytes | quote }}
+    overrides:
+      namespaces:
+{{ toYaml .Values.rotator.overrides.namespaces | indent 8 }}
+      paths:
+{{ toYaml .Values.rotator.overrides.paths | indent 8 }}
+
