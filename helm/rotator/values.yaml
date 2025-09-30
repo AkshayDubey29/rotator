@@ -65,6 +65,12 @@ rotator:
 service:
   labels: {}
     # Add labels for service discovery if needed
+  annotations: {}
+    # Add annotations for Prometheus discovery if needed
+    # Example for annotation-based discovery:
+    # prometheus.io/scrape: "true"
+    # prometheus.io/path: "/metrics"
+    # prometheus.io/port: "9102"
 
 serviceMonitor:
   enabled: true

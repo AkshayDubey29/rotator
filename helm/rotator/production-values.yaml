@@ -122,6 +122,14 @@ service:
   labels: {}
     # Add any additional service labels for discovery if needed
     # monitoring: enabled
+  
+  # ANNOTATION-BASED DISCOVERY (Alternative to ServiceMonitor)
+  # Enable these if your Grafana Agent uses annotation discovery instead of ServiceMonitor
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/path: "/metrics"  
+    prometheus.io/port: "9090"
+    # Comment out the above and set to {} if using ServiceMonitor discovery
 
 # Monitoring configuration - CRITICAL for Mimir integration
 serviceMonitor:
