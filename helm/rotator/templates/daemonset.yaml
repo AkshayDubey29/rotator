@@ -33,13 +33,13 @@ spec:
         - name: rotator
           image: "{{ .Values.rotator.image.repository }}:{{ .Values.rotator.image.tag }}"
           imagePullPolicy: {{ .Values.rotator.image.pullPolicy }}
-          args: ["--config=/etc/rotator/config.yaml"]
+          args: ["--config=/etc/rotator/config.yaml", "--listen=:{{ .Values.rotator.metrics.port | default 9102 }}"]
           env:
             - name: GIN_MODE
               value: release
           ports:
             - name: http
-              containerPort: 9102
+              containerPort: {{ .Values.rotator.metrics.port | default 9102 }}
           resources:
             {{- toYaml .Values.rotator.resources | nindent 12 }}
           volumeMounts:

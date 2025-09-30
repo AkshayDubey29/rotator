@@ -1,0 +1,55 @@
+# Configuration for using port 9090 (standard Prometheus port)
+# Use this if your monitoring setup expects metrics on port 9090
+
+rotator:
+  image:
+    repository: your-registry/rotator
+    tag: v1.1.0
+    pullPolicy: IfNotPresent
+  
+  # Use port 9090 if your environment expects that
+  metrics:
+    port: 9090
+
+# ServiceMonitor configuration for port 9090
+serviceMonitor:
+  enabled: true
+  interval: 30s
+  scrapeTimeout: 10s
+  honorLabels: false
+  
+  # Add your Prometheus discovery labels here
+  labels:
+    # Copy exact labels from your working node-exporter ServiceMonitor
+    # Example:
+    # prometheus: kube-prometheus
+    # release: kube-prometheus-stack
+
+# Service configuration  
+service:
+  labels: {}
+
+# Security context
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 65534
+  runAsGroup: 65534
+  fsGroup: 65534
+
+# Default log rotation policies
+defaults:
+  discovery:
+    path: /pang/logs
+    include: ["**/*.log","**/*.out","**/*.jsonl"]
+    exclude: ["**/*.gz","**/*.zip","**/*.tmp","**/*.idx","**/.**","**/*.sock","**/*.fifo"]
+    maxDepth: 8
+  policy:
+    size: 100Mi
+    age: 24h
+    inactive: 6h
+    keepFiles: 5
+    keepDays: 3
+    compressAfter: 1h
+    defaultMode: rename
+  budgets:
+    perNamespaceBytes: 10Gi

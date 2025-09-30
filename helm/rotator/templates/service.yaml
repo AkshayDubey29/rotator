@@ -16,7 +16,7 @@ spec:
     app: rotator
   ports:
     - name: http
-      port: 9102
-      targetPort: 9102
+      port: {{ .Values.rotator.metrics.port | default 9102 }}
+      targetPort: {{ .Values.rotator.metrics.port | default 9102 }}
       protocol: TCP
 

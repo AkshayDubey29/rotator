@@ -3,6 +3,12 @@ rotator:
     repository: ghcr.io/your-org/rotator
     tag: v1.0.0
     pullPolicy: IfNotPresent
+  
+  # Metrics configuration
+  metrics:
+    port: 9102                    # Standard exporter port (9090 is for Prometheus itself)
+    # Use port: 9090 if your environment expects that
+  
   nodeSelector: {}
   tolerations: []
   affinity: {}
