@@ -10,7 +10,8 @@ echo "========================================="
 echo ""
 
 # Configuration
-METRICS_PORT=${1:-9102}
+NAMESPACE=${1:-""}                    # First arg: namespace (optional)
+METRICS_PORT=${2:-9102}               # Second arg: metrics port
 POD_NAME=""
 
 # Color codes
@@ -22,8 +23,18 @@ NC='\033[0m'
 
 # Find rotator pod
 find_pod() {
-    echo "1️⃣ Finding rotator pod..."
-    POD_NAME=$(kubectl get pods -l app=rotator -o jsonpath="{.items[0].metadata.name}" 2>/dev/null)
+    if [[ -n "$NAMESPACE" ]]; then
+        echo "1️⃣ Finding rotator pod in namespace: $NAMESPACE..."
+        POD_NAME=$(kubectl get pods -n $NAMESPACE -l app=rotator -o jsonpath="{.items[0].metadata.name}" 2>/dev/null)
+    else
+        echo "1️⃣ Finding rotator pod in all namespaces..."
+        POD_NAME=$(kubectl get pods --all-namespaces -l app=rotator -o jsonpath="{.items[0].metadata.name}" 2>/dev/null)
+        if [[ -n "$POD_NAME" ]]; then
+            # Get the namespace too
+            NAMESPACE=$(kubectl get pods --all-namespaces -l app=rotator -o jsonpath="{.items[0].metadata.namespace}" 2>/dev/null)
+            echo "   Found in namespace: $NAMESPACE"
+        fi
+    fi
     
     if [[ -z "$POD_NAME" ]]; then
         echo -e "${RED}❌ No rotator pod found${NC}"
@@ -33,7 +44,7 @@ find_pod() {
     echo -e "${GREEN}✅ Found pod: $POD_NAME${NC}"
     
     # Check pod status
-    POD_STATUS=$(kubectl get pod $POD_NAME -o jsonpath="{.status.phase}")
+    POD_STATUS=$(kubectl get pod $POD_NAME -n $NAMESPACE -o jsonpath="{.status.phase}")
     echo "   Pod status: $POD_STATUS"
     
     if [[ "$POD_STATUS" != "Running" ]]; then
@@ -49,7 +60,7 @@ test_endpoint() {
     
     # Test internal access
     echo "   Testing internal access on port $METRICS_PORT..."
-    if kubectl exec $POD_NAME -- wget -qO- http://localhost:$METRICS_PORT/metrics >/dev/null 2>&1; then
+    if kubectl exec $POD_NAME -n $NAMESPACE -- wget -qO- http://localhost:$METRICS_PORT/metrics >/dev/null 2>&1; then
         echo -e "${GREEN}✅ Metrics endpoint accessible internally${NC}"
     else
         echo -e "${RED}❌ Metrics endpoint not accessible internally${NC}"
@@ -58,7 +69,7 @@ test_endpoint() {
         for port in 9090 9102; do
             if [[ "$port" != "$METRICS_PORT" ]]; then
                 echo "   Trying port $port..."
-                if kubectl exec $POD_NAME -- wget -qO- http://localhost:$port/metrics >/dev/null 2>&1; then
+                if kubectl exec $POD_NAME -n $NAMESPACE -- wget -qO- http://localhost:$port/metrics >/dev/null 2>&1; then
                     echo -e "${YELLOW}⚠️  Found metrics on port $port instead of $METRICS_PORT${NC}"
                     METRICS_PORT=$port
                     break
@@ -74,7 +85,7 @@ check_baseline_metrics() {
     echo "3️⃣ Checking baseline metrics (should appear immediately)..."
     
     # Get all metrics
-    ALL_METRICS=$(kubectl exec $POD_NAME -- wget -qO- http://localhost:$METRICS_PORT/metrics 2>/dev/null)
+    ALL_METRICS=$(kubectl exec $POD_NAME -n $NAMESPACE -- wget -qO- http://localhost:$METRICS_PORT/metrics 2>/dev/null)
     
     # Define expected baseline metrics
     declare -a EXPECTED_METRICS=(
@@ -105,8 +116,8 @@ check_scan_activity() {
     echo "4️⃣ Checking scan activity (should increment every 30s)..."
     
     # Get initial scan count
-    INITIAL_SCANS=$(kubectl exec $POD_NAME -- wget -qO- http://localhost:$METRICS_PORT/metrics 2>/dev/null | grep "^rotator_scan_cycles_total" | awk '{print $2}')
-    
+    INITIAL_SCANS=$(kubectl exec $POD_NAME -n $NAMESPACE -- wget -qO- http://localhost:$METRICS_PORT/metrics 2>/dev/null | grep "^rotator_scan_cycles_total" | awk '{print $2}')
+
     if [[ -z "$INITIAL_SCANS" ]]; then
         echo -e "${RED}❌ rotator_scan_cycles_total not found${NC}"
         return
@@ -118,7 +129,7 @@ check_scan_activity() {
     sleep 35
     
     # Get new scan count
-    NEW_SCANS=$(kubectl exec $POD_NAME -- wget -qO- http://localhost:$METRICS_PORT/metrics 2>/dev/null | grep "^rotator_scan_cycles_total" | awk '{print $2}')
+    NEW_SCANS=$(kubectl exec $POD_NAME -n $NAMESPACE -- wget -qO- http://localhost:$METRICS_PORT/metrics 2>/dev/null | grep "^rotator_scan_cycles_total" | awk '{print $2}')
     
     echo "   New scan count: $NEW_SCANS"
     
@@ -136,7 +147,7 @@ show_mimir_queries() {
     echo ""
     
     # Get current metrics
-    CURRENT_METRICS=$(kubectl exec $POD_NAME -- wget -qO- http://localhost:$METRICS_PORT/metrics 2>/dev/null)
+    CURRENT_METRICS=$(kubectl exec $POD_NAME -n $NAMESPACE -- wget -qO- http://localhost:$METRICS_PORT/metrics 2>/dev/null)
     
     echo -e "${BLUE}📊 Use these queries in Mimir/Grafana:${NC}"
     echo ""
@@ -166,7 +177,7 @@ check_logs() {
     echo "6️⃣ Checking recent logs..."
     
     echo "   Last 10 log entries:"
-    kubectl logs $POD_NAME --tail=10 | while read line; do
+    kubectl logs $POD_NAME -n $NAMESPACE --tail=10 | while read line; do
         echo "   $line"
     done
 }
@@ -189,7 +200,7 @@ main() {
     echo "   - up{job=~\".*rotator.*\"} (value: 1)"
     echo ""
     echo "🔧 If metrics don't appear in Mimir:"
-    echo "   1. Check ServiceMonitor exists: kubectl get servicemonitor rotator"
+    echo "   1. Check ServiceMonitor exists: kubectl get servicemonitor rotator -n $NAMESPACE"
     echo "   2. Check Grafana Agent logs for scrape errors"
     echo "   3. Verify ServiceMonitor labels match Agent config"
     echo "   4. Use queries above to test in Mimir/Grafana"
@@ -198,17 +209,20 @@ main() {
 
 # Handle command line arguments
 if [[ "$1" == "--help" || "$1" == "-h" ]]; then
-    echo "Usage: $0 [metrics_port]"
+    echo "Usage: $0 [namespace] [metrics_port]"
     echo ""
     echo "Verifies baseline metrics that should appear immediately when rotator starts."
     echo "Useful for testing Mimir integration even with zero log files."
     echo ""
     echo "Arguments:"
+    echo "  namespace       Kubernetes namespace (searches all if not specified)"
     echo "  metrics_port    Port where metrics are exposed (default: 9102)"
     echo ""
     echo "Examples:"
-    echo "  $0              # Use default port 9102"
-    echo "  $0 9090         # Use port 9090"
+    echo "  $0                          # Search all namespaces, use port 9102"
+    echo "  $0 log-rotation            # Search log-rotation namespace, use port 9102"
+    echo "  $0 log-rotation 9090       # Search log-rotation namespace, use port 9090"
+    echo "  $0 \"\" 9090                 # Search all namespaces, use port 9090"
     exit 0
 fi
 
