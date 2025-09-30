@@ -52,16 +52,16 @@ func NewRegistry() *Registry {
 		reg: r,
 	}
 	r.MustRegister(m.RotationsTotal, m.BytesRotatedTotal, m.ErrorsTotal, m.NamespaceUsageBytes, m.OverridesApplied, m.ScanCycles, m.FilesDiscovered)
-	
+
 	// Initialize all metrics so they appear in /metrics endpoint even with zero values
 	m.FilesDiscovered.Set(0)
-	m.RotationsTotal.WithLabelValues("_default", "rename").Add(0)        // Initialize with dummy labels
-	m.BytesRotatedTotal.WithLabelValues("_default").Add(0)               // Will show up as zero
-	m.NamespaceUsageBytes.WithLabelValues("_default").Set(0)             // Will show up as zero
-	m.OverridesApplied.WithLabelValues("namespace").Add(0)               // Will show up as zero
-	m.OverridesApplied.WithLabelValues("path").Add(0)                    // Will show up as zero
-	m.ErrorsTotal.WithLabelValues("discovery").Add(0)                    // Will show up as zero
-	
+	m.RotationsTotal.WithLabelValues("_default", "rename").Add(0) // Initialize with dummy labels
+	m.BytesRotatedTotal.WithLabelValues("_default").Add(0)        // Will show up as zero
+	m.NamespaceUsageBytes.WithLabelValues("_default").Set(0)      // Will show up as zero
+	m.OverridesApplied.WithLabelValues("namespace").Add(0)        // Will show up as zero
+	m.OverridesApplied.WithLabelValues("path").Add(0)             // Will show up as zero
+	m.ErrorsTotal.WithLabelValues("discovery").Add(0)             // Will show up as zero
+
 	return m
 }
 

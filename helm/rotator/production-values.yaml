@@ -114,9 +114,38 @@ securityContext:
 
 # Monitoring configuration
 serviceMonitor:
-  enabled: false              # Set to true if Prometheus Operator is available
+  enabled: true               # Enable ServiceMonitor for Prometheus scraping
   interval: 30s
   scrapeTimeout: 10s
+  honorLabels: false
+  # IMPORTANT: Add labels that match your Prometheus serviceMonitorSelector
+  # Check your node-exporter ServiceMonitor for reference:
+  # kubectl get servicemonitor --all-namespaces -l app.kubernetes.io/name=node-exporter -o yaml
+  labels:
+    # Common labels for different Prometheus setups (uncomment as needed):
+    
+    # For kube-prometheus-stack:
+    # prometheus: kube-prometheus
+    # release: kube-prometheus-stack
+    
+    # For Prometheus Operator:
+    # release: prometheus-operator
+    # prometheus: prometheus-operator
+    
+    # For Rancher/RKE monitoring:
+    # source: rancher-monitoring
+    # prometheus: rancher-monitoring-prometheus
+    
+    # Custom labels (adapt to your environment):
+    # monitoring: enabled
+    # team: infrastructure
+    
+  # Namespace selection (uncomment if Prometheus only scrapes specific namespaces)
+  namespaceSelector: {}
+    # matchNames:
+    # - default
+    # - monitoring
+    # - kube-system
 
 # Priority class for important workloads
 priorityClass:

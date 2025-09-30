@@ -59,6 +59,15 @@ rotator:
 serviceMonitor:
   enabled: true
   interval: 30s
+  scrapeTimeout: 10s
+  honorLabels: false
+  labels: {}
+    # Add labels that match your Prometheus serviceMonitorSelector
+    # Example:
+    # prometheus: kube-prometheus
+    # release: prometheus-operator
+  namespaceSelector: {}
+    # matchNames: []
 
 priorityClassName: system-node-critical
 
