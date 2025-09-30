@@ -1,0 +1,51 @@
+# Production Configuration for Mimir Integration
+# Apply this configuration to fix missing ServiceMonitor and labels
+
+# Enable ServiceMonitor (CRITICAL - was disabled!)
+serviceMonitor:
+  enabled: true
+  interval: 30s
+  scrapeTimeout: 10s
+  honorLabels: false
+  
+  # IMPORTANT: Add the exact labels from your working node-exporter
+  # Run this command in your production cluster to find them:
+  # kubectl get servicemonitor --all-namespaces -l app.kubernetes.io/name=node-exporter -o yaml | grep -A 10 "labels:"
+  
+  labels: 
+    # Common patterns (uncomment what matches your setup):
+    
+    # For kube-prometheus-stack:
+    # prometheus: kube-prometheus
+    # release: kube-prometheus-stack
+    
+    # For Prometheus Operator:
+    # prometheus: prometheus-operator
+    # release: prometheus-operator
+    
+    # For Rancher/RKE:
+    # source: rancher-monitoring
+    # prometheus: rancher-monitoring-prometheus
+    
+    # If you find different labels in node-exporter, add them here:
+    # custom-label: custom-value
+
+# Enhanced service with proper labels
+service:
+  labels:
+    # Add any additional service labels if needed for discovery
+    # monitoring: enabled
+
+# Ensure proper image and other settings
+rotator:
+  image:
+    repository: your-registry/rotator  # Update with your registry
+    tag: v1.1.0                       # Update with your tag
+    pullPolicy: IfNotPresent
+
+# Security context for production
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 65534
+  runAsGroup: 65534
+  fsGroup: 65534

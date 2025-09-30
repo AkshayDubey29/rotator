@@ -56,6 +56,10 @@ rotator:
         discovery:
           exclude: ["**/*.tmp","**/*.gz"]
 
+service:
+  labels: {}
+    # Add labels for service discovery if needed
+
 serviceMonitor:
   enabled: true
   interval: 30s
