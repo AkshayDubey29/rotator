@@ -1,8 +1,13 @@
 rotator:
   image:
     repository: your-registry/rotator  # Update with your registry
-    tag: v1.0.0
+    tag: v1.1.0                       # Updated version with metrics fixes
     pullPolicy: IfNotPresent
+  
+  # Metrics configuration - IMPORTANT for Mimir integration
+  metrics:
+    port: 9102                        # Standard exporter port (use 9090 if your environment expects that)
+    # For environments using port 9090: set port: 9090
   
   # Production resource configuration
   resources:
@@ -112,19 +117,26 @@ securityContext:
   runAsGroup: 65534
   fsGroup: 65534
 
-# Monitoring configuration
+# Enhanced service configuration for monitoring
+service:
+  labels: {}
+    # Add any additional service labels for discovery if needed
+    # monitoring: enabled
+
+# Monitoring configuration - CRITICAL for Mimir integration
 serviceMonitor:
-  enabled: true               # Enable ServiceMonitor for Prometheus scraping
+  enabled: true               # FIXED: Enable ServiceMonitor (was disabled - main blocker!)
   interval: 30s
   scrapeTimeout: 10s
   honorLabels: false
-  # IMPORTANT: Add labels that match your Prometheus serviceMonitorSelector
-  # Check your node-exporter ServiceMonitor for reference:
-  # kubectl get servicemonitor --all-namespaces -l app.kubernetes.io/name=node-exporter -o yaml
+  
+  # CRITICAL: Add labels that match your Prometheus serviceMonitorSelector
+  # Run this command to find the correct labels:
+  # kubectl get servicemonitor --all-namespaces -l app.kubernetes.io/name=node-exporter -o yaml | grep -A 10 "labels:"
   labels:
-    # Common labels for different Prometheus setups (uncomment as needed):
+    # Common labels for different Prometheus setups (uncomment and adapt as needed):
     
-    # For kube-prometheus-stack:
+    # For kube-prometheus-stack (most common):
     # prometheus: kube-prometheus
     # release: kube-prometheus-stack
     
@@ -136,9 +148,17 @@ serviceMonitor:
     # source: rancher-monitoring
     # prometheus: rancher-monitoring-prometheus
     
-    # Custom labels (adapt to your environment):
+    # For OpenShift monitoring:
+    # openshift.io/cluster-monitoring: "true"
+    
+    # Custom labels (copy from your working node-exporter):
     # monitoring: enabled
     # team: infrastructure
+    # app.kubernetes.io/name: rotator
+    
+    # EXAMPLE: Copy these exact labels from your node-exporter ServiceMonitor
+    # prometheus: my-prometheus
+    # release: my-monitoring-stack
     
   # Namespace selection (uncomment if Prometheus only scrapes specific namespaces)
   namespaceSelector: {}
@@ -146,6 +166,7 @@ serviceMonitor:
     # - default
     # - monitoring
     # - kube-system
+    # - production
 
 # Priority class for important workloads
 priorityClass:
@@ -155,3 +176,50 @@ priorityClass:
 # Image pull secrets (if using private registry)
 # imagePullSecrets:
 #   - name: registry-secret
+
+# =====================================================
+# PRODUCTION DEPLOYMENT INSTRUCTIONS
+# =====================================================
+#
+# 1. UPDATE REQUIRED VALUES:
+#    - rotator.image.repository: your-registry/rotator
+#    - rotator.image.tag: v1.1.0
+#    - serviceMonitor.labels: (copy from node-exporter)
+#
+# 2. FIND PROMETHEUS LABELS:
+#    kubectl get servicemonitor --all-namespaces -l app.kubernetes.io/name=node-exporter -o yaml | grep -A 10 "labels:"
+#
+# 3. PORT CONFIGURATION:
+#    - Default: 9102 (standard exporter port)
+#    - Alternative: 9090 (if your environment expects this)
+#    - Set: rotator.metrics.port: 9090
+#
+# 4. DEPLOY COMMAND:
+#    helm install rotator ./helm/rotator \
+#      --namespace infrastructure \
+#      --create-namespace \
+#      -f production-values.yaml \
+#      --set rotator.image.repository=your-registry/rotator \
+#      --set rotator.image.tag=v1.1.0 \
+#      --set serviceMonitor.labels.prometheus=your-prometheus-label \
+#      --set serviceMonitor.labels.release=your-release-label
+#
+# 5. VERIFY DEPLOYMENT:
+#    - Check pods: kubectl get pods -l app=rotator
+#    - Check service: kubectl get service rotator
+#    - Check ServiceMonitor: kubectl get servicemonitor rotator
+#    - Test metrics: kubectl port-forward svc/rotator 9102:9102 && curl http://localhost:9102/metrics
+#
+# 6. VERIFY MIMIR INTEGRATION:
+#    - Prometheus targets: kubectl port-forward svc/prometheus 9090:9090
+#    - Visit: http://localhost:9090/targets (look for rotator)
+#    - Query in Mimir: up{job=~".*rotator.*"}
+#
+# 7. MONITORING QUERIES:
+#    - Health: up{job=~".*rotator.*"}
+#    - Activity: rate(rotator_scan_cycles_total[5m])
+#    - Files: rotator_files_discovered
+#    - Rotations: rate(rotator_rotations_total[5m])
+#    - Errors: rate(rotator_errors_total[5m])
+#
+# =====================================================
