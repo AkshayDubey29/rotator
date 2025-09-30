@@ -1,0 +1,26 @@
+# Production ServiceMonitor for Grafana Agent Discovery
+# Based on your cluster's monitoring setup
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: rotator
+  namespace: log-rotation
+  labels:
+    app: rotator
+    app.kubernetes.io/instance: rotator
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: rotator
+    app.kubernetes.io/version: v1.1.0
+spec:
+  selector:
+    matchLabels:
+      app: rotator
+  endpoints:
+    - port: http
+      interval: 30s
+      path: /metrics
+      scrapeTimeout: 10s
+      honorLabels: false
+  namespaceSelector:
+    matchNames:
+    - log-rotation

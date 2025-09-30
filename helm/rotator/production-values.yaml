@@ -4,10 +4,10 @@ rotator:
     tag: v1.1.0                       # Updated version with metrics fixes
     pullPolicy: IfNotPresent
   
-  # Metrics configuration - IMPORTANT for Mimir integration
+  # Metrics configuration - IMPORTANT for Mimir integration  
   metrics:
-    port: 9102                        # Standard exporter port (use 9090 if your environment expects that)
-    # For environments using port 9090: set port: 9090
+    port: 9090                        # PRODUCTION: Use port 9090 (matches your environment)
+    # Your cluster uses port 9090 for metrics services
   
   # Production resource configuration
   resources:
@@ -130,35 +130,23 @@ serviceMonitor:
   scrapeTimeout: 10s
   honorLabels: false
   
-  # CRITICAL: Add labels that match your Prometheus serviceMonitorSelector
-  # Run this command to find the correct labels:
-  # kubectl get servicemonitor --all-namespaces -l app.kubernetes.io/name=node-exporter -o yaml | grep -A 10 "labels:"
+  # PRODUCTION LABELS: Based on your Grafana Agent setup
+  # Your cluster uses Grafana Agent for metrics collection
   labels:
-    # Common labels for different Prometheus setups (uncomment and adapt as needed):
+    # Standard Kubernetes labels (matching your service pattern)
+    app: rotator
+    app.kubernetes.io/instance: rotator
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: rotator
+    app.kubernetes.io/version: v1.1.0
     
-    # For kube-prometheus-stack (most common):
-    # prometheus: kube-prometheus
-    # release: kube-prometheus-stack
+    # Add any additional labels required by your Grafana Agent configuration
+    # Check your mimir-monitoring-alloy ConfigMap for specific requirements:
+    # kubectl get cm mimir-monitoring-alloy -o yaml
     
-    # For Prometheus Operator:
-    # release: prometheus-operator
-    # prometheus: prometheus-operator
-    
-    # For Rancher/RKE monitoring:
-    # source: rancher-monitoring
-    # prometheus: rancher-monitoring-prometheus
-    
-    # For OpenShift monitoring:
-    # openshift.io/cluster-monitoring: "true"
-    
-    # Custom labels (copy from your working node-exporter):
-    # monitoring: enabled
-    # team: infrastructure
-    # app.kubernetes.io/name: rotator
-    
-    # EXAMPLE: Copy these exact labels from your node-exporter ServiceMonitor
-    # prometheus: my-prometheus
-    # release: my-monitoring-stack
+    # Common Grafana Agent labels (uncomment if needed):
+    # grafana-agent: "true"
+    # monitoring: "enabled"
     
   # Namespace selection (uncomment if Prometheus only scrapes specific namespaces)
   namespaceSelector: {}
