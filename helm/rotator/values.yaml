@@ -6,8 +6,8 @@ rotator:
   
   # Metrics configuration
   metrics:
-    port: 9102                    # Standard exporter port (9090 is for Prometheus itself)
-    # Use port: 9090 if your environment expects that
+    port: 9102                    # Default exporter port
+    # Production environments may use 9090 - see production-values.yaml
   
   nodeSelector: {}
   tolerations: []
