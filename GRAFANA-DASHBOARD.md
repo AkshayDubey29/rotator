@@ -11,21 +11,23 @@ This Grafana dashboard provides complete observability for the Log Rotator servi
 ## 📋 **Dashboard Sections**
 
 ### **1. Service Overview (Top Row)**
-- **Service Health**: Up/Down status indicator
+- **Service Health**: Up/Down status with Kubernetes-native labels
 - **Active Pods**: Number of running rotator instances
-- **Files Discovered**: Current log files being monitored
-- **Total Scan Cycles**: Overall activity counter
+- **Files Monitored**: Current log files being tracked
+- **Errors (5m)**: Recent rotation failures with color coding
+- **Rotations (5m)**: Successful operations counter
+- **Error Rate %**: Real-time error percentage
 
-### **2. Activity Monitoring**
+### **2. Error Analysis & Tracking**
+- **Error Details by Type**: Breakdown of rotation_failed, process_file, discovery errors
+- **Failed File Operations**: Files that couldn't be rotated with namespace details
 - **Scan Activity Rate**: Should be ~2 scans/minute (30s intervals)
-- **Files Discovered Over Time**: File discovery trends
-- **Rotation Rate by Namespace**: Log rotation activity breakdown
-- **Data Rotation Rate**: Bytes processed during rotations
+- **Files Discovery Trend**: File growth patterns over time
 
-### **3. Error & Policy Tracking**
-- **Error Rate**: Error frequency by type with alerting thresholds
-- **Policy Override Activity**: Namespace and path-specific overrides
-- **Namespace Storage Usage**: Budget tracking per namespace
+### **3. Operational Metrics**
+- **Successful Rotations by Namespace**: Working rotation breakdown
+- **Data Processing Rate**: Bytes processed during rotations
+- **Namespace Storage Usage**: Budget tracking with 8GB/10GB thresholds
 
 ### **4. Resource Utilization**
 - **Pod CPU Usage**: Per-pod CPU consumption with thresholds
@@ -58,8 +60,8 @@ This Grafana dashboard provides complete observability for the Log Rotator servi
 
 ### **Health Metrics:**
 ```promql
-# Service availability
-up{job=~".*rotator.*"}
+# Service availability (multiple label patterns for Kubernetes compatibility)
+up{kubernetes_name="rotator"} OR up{app="rotator"} OR up{job=~".*rotator.*"} OR up{kubernetes_io_app_name="rotator"}
 
 # Scan activity (should be ~0.033/sec = 2/min)
 rate(rotator_scan_cycles_total[1m])
@@ -96,11 +98,14 @@ rate(container_fs_writes_bytes_total{pod=~"rotator-.*"}[1m])
 
 ### **Critical Alerts:**
 ```yaml
-# Service Down
-up{job=~".*rotator.*"} == 0
+# Service Down (Kubernetes-compatible)
+(up{kubernetes_name="rotator"} OR up{app="rotator"} OR up{job=~".*rotator.*"} OR up{kubernetes_io_app_name="rotator"}) == 0
 
 # High Error Rate (>5% of scans)
 rate(rotator_errors_total[5m]) / rate(rotator_scan_cycles_total[5m]) > 0.05
+
+# File Rotation Failures (>5 files failed in 5 minutes)
+increase(rotator_errors_total{type="rotation_failed"}[5m]) > 5
 
 # No Scan Activity (>2 minutes without scans)
 increase(rotator_scan_cycles_total[2m]) == 0

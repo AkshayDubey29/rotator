@@ -15,7 +15,7 @@
       }
     ]
   },
-  "description": "Comprehensive monitoring dashboard for Log Rotator service with resource utilization and operational metrics",
+  "description": "Production Log Rotator Dashboard with Kubernetes-native metrics and comprehensive error tracking",
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
@@ -28,7 +28,7 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "Overall health status of the rotator service",
+      "description": "Service health using Kubernetes app labels",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -69,7 +69,7 @@
       },
       "gridPos": {
         "h": 4,
-        "w": 6,
+        "w": 4,
         "x": 0,
         "y": 0
       },
@@ -95,7 +95,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "expr": "up{job=~\".*rotator.*\"}",
+          "expr": "up{kubernetes_name=\"rotator\"} OR up{app=\"rotator\"} OR up{job=~\".*rotator.*\"} OR up{kubernetes_io_app_name=\"rotator\"}",
           "format": "time_series",
           "intervalFactor": 1,
           "refId": "A"
@@ -109,46 +109,26 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "Number of active rotator pods",
+      "description": "Active rotator pods in cluster",
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 10,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "vis": false
-            },
-            "lineInterpolation": "linear",
-            "lineWidth": 2,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "never",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
+            "mode": "thresholds"
           },
           "mappings": [],
           "thresholds": {
             "steps": [
               {
-                "color": "green",
+                "color": "red",
                 "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              },
+              {
+                "color": "green",
+                "value": 2
               }
             ]
           },
@@ -158,44 +138,47 @@
       },
       "gridPos": {
         "h": 4,
-        "w": 6,
-        "x": 6,
+        "w": 4,
+        "x": 4,
         "y": 0
       },
       "id": 2,
       "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom"
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
         },
-        "tooltip": {
-          "mode": "single",
-          "sort": "none"
-        }
+        "textMode": "auto"
       },
+      "pluginVersion": "10.0.0",
       "targets": [
         {
           "datasource": {
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "expr": "count(up{job=~\".*rotator.*\"} == 1)",
+          "expr": "count((up{kubernetes_name=\"rotator\"} OR up{app=\"rotator\"} OR up{job=~\".*rotator.*\"} OR up{kubernetes_io_app_name=\"rotator\"}) == 1)",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "Active Pods",
           "refId": "A"
         }
       ],
       "title": "Active Pods",
-      "type": "timeseries"
+      "type": "stat"
     },
     {
       "datasource": {
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "Current number of log files being monitored",
+      "description": "Files currently being monitored",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -224,8 +207,8 @@
       },
       "gridPos": {
         "h": 4,
-        "w": 6,
-        "x": 12,
+        "w": 4,
+        "x": 8,
         "y": 0
       },
       "id": 3,
@@ -256,7 +239,7 @@
           "refId": "A"
         }
       ],
-      "title": "Files Discovered",
+      "title": "Files Monitored",
       "type": "stat"
     },
     {
@@ -264,7 +247,76 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "Total scan cycles performed (activity indicator)",
+      "description": "Total rotation errors in last 5 minutes",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 5
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 12,
+        "y": 0
+      },
+      "id": 4,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "10.0.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "sum(increase(rotator_errors_total[5m]))",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "refId": "A"
+        }
+      ],
+      "title": "Errors (5m)",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Successful rotations in last 5 minutes",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -285,11 +337,11 @@
       },
       "gridPos": {
         "h": 4,
-        "w": 6,
-        "x": 18,
+        "w": 4,
+        "x": 16,
         "y": 0
       },
-      "id": 4,
+      "id": 5,
       "options": {
         "colorMode": "value",
         "graphMode": "area",
@@ -311,13 +363,13 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "expr": "sum(rotator_scan_cycles_total)",
+          "expr": "sum(increase(rotator_rotations_total[5m]))",
           "format": "time_series",
           "intervalFactor": 1,
           "refId": "A"
         }
       ],
-      "title": "Total Scan Cycles",
+      "title": "Rotations (5m)",
       "type": "stat"
     },
     {
@@ -325,7 +377,324 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "Rate of scan cycles - should be ~2 per minute (30s interval)",
+      "description": "Current error rate percentage",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 5
+              }
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 20,
+        "y": 0
+      },
+      "id": 6,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "10.0.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "sum(rate(rotator_errors_total[5m])) / sum(rate(rotator_scan_cycles_total[5m])) * 100",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "refId": "A"
+        }
+      ],
+      "title": "Error Rate %",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Detailed error breakdown by type and impact",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisLabel": "errors/min",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 20,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "vis": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "normal"
+            },
+            "thresholdsStyle": {
+              "mode": "area"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 0.1
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          },
+          "unit": "reqps"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "rotation_failed"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "process_file"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "discovery"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "yellow"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 4
+      },
+      "id": 7,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "sum",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "rate(rotator_errors_total[1m]) * 60",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "{{type}} - Errors/min",
+          "refId": "A"
+        }
+      ],
+      "title": "Error Details by Type",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Files that failed rotation with details",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisLabel": "failed files",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "bars",
+            "fillOpacity": 80,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "vis": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "normal"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 4
+      },
+      "id": 8,
+      "options": {
+        "legend": {
+          "calcs": [
+            "sum",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "increase(rotator_errors_total{type=\"rotation_failed\"}[5m])",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "{{namespace}} - Failed Rotations (5m)",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "increase(rotator_errors_total{type=\"process_file\"}[5m])",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "{{namespace}} - File Processing Errors (5m)",
+          "refId": "B"
+        }
+      ],
+      "title": "Failed File Operations",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Service activity and health indicators",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -388,9 +757,9 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 4
+        "y": 12
       },
-      "id": 5,
+      "id": 9,
       "options": {
         "legend": {
           "calcs": [
@@ -418,7 +787,7 @@
           "refId": "A"
         }
       ],
-      "title": "Scan Activity Rate",
+      "title": "Scan Activity Rate (Expected: ~2/min)",
       "type": "timeseries"
     },
     {
@@ -426,7 +795,7 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "Files currently being monitored by the rotator",
+      "description": "Files discovered over time with trend analysis",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -477,9 +846,9 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 4
+        "y": 12
       },
-      "id": 6,
+      "id": 10,
       "options": {
         "legend": {
           "calcs": [
@@ -508,7 +877,7 @@
           "refId": "A"
         }
       ],
-      "title": "Files Discovered Over Time",
+      "title": "Files Discovery Trend",
       "type": "timeseries"
     },
     {
@@ -516,7 +885,7 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "Log rotation activity by namespace and technique",
+      "description": "Successful rotations by namespace and technique",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -567,9 +936,9 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 12
+        "y": 20
       },
-      "id": 7,
+      "id": 11,
       "options": {
         "legend": {
           "calcs": [
@@ -597,7 +966,7 @@
           "refId": "A"
         }
       ],
-      "title": "Rotation Rate by Namespace",
+      "title": "Successful Rotations by Namespace",
       "type": "timeseries"
     },
     {
@@ -605,7 +974,7 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "Data throughput during log rotations",
+      "description": "Data throughput during rotations",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -656,9 +1025,9 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 12
+        "y": 20
       },
-      "id": 8,
+      "id": 12,
       "options": {
         "legend": {
           "calcs": [
@@ -686,7 +1055,7 @@
           "refId": "A"
         }
       ],
-      "title": "Data Rotation Rate",
+      "title": "Data Processing Rate",
       "type": "timeseries"
     },
     {
@@ -694,193 +1063,7 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "Error rates by error type",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisLabel": "errors/min",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 20,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "vis": false
-            },
-            "lineInterpolation": "linear",
-            "lineWidth": 2,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "normal"
-            },
-            "thresholdsStyle": {
-              "mode": "area"
-            }
-          },
-          "mappings": [],
-          "thresholds": {
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "yellow",
-                "value": 0.1
-              },
-              {
-                "color": "red",
-                "value": 1
-              }
-            ]
-          },
-          "unit": "reqps"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 20
-      },
-      "id": 9,
-      "options": {
-        "legend": {
-          "calcs": [
-            "lastNotNull",
-            "sum"
-          ],
-          "displayMode": "table",
-          "placement": "bottom"
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "none"
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "expr": "rate(rotator_errors_total[1m]) * 60",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "legendFormat": "{{type}} - Errors/min",
-          "refId": "A"
-        }
-      ],
-      "title": "Error Rate",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "description": "Policy overrides applied by type",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisLabel": "overrides/min",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 10,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "vis": false
-            },
-            "lineInterpolation": "linear",
-            "lineWidth": 2,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "normal"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "thresholds": {
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          },
-          "unit": "reqps"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 20
-      },
-      "id": 10,
-      "options": {
-        "legend": {
-          "calcs": [
-            "lastNotNull",
-            "sum"
-          ],
-          "displayMode": "table",
-          "placement": "bottom"
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "none"
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "expr": "rate(rotator_overrides_applied_total[1m]) * 60",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "legendFormat": "{{type}} - Overrides/min",
-          "refId": "A"
-        }
-      ],
-      "title": "Policy Override Activity",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "description": "Storage usage per namespace and budgets",
+      "description": "Storage usage and budget tracking per namespace",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -911,7 +1094,7 @@
               "mode": "none"
             },
             "thresholdsStyle": {
-              "mode": "off"
+              "mode": "line"
             }
           },
           "mappings": [],
@@ -920,6 +1103,14 @@
               {
                 "color": "green",
                 "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 8589934592
+              },
+              {
+                "color": "red",
+                "value": 10737418240
               }
             ]
           },
@@ -933,7 +1124,7 @@
         "x": 0,
         "y": 28
       },
-      "id": 11,
+      "id": 13,
       "options": {
         "legend": {
           "calcs": [
@@ -961,7 +1152,7 @@
           "refId": "A"
         }
       ],
-      "title": "Namespace Storage Usage",
+      "title": "Namespace Storage Usage (Thresholds: 8GB=Warning, 10GB=Critical)",
       "type": "timeseries"
     },
     {
@@ -1030,7 +1221,7 @@
         "x": 0,
         "y": 36
       },
-      "id": 12,
+      "id": 14,
       "options": {
         "legend": {
           "calcs": [
@@ -1128,7 +1319,7 @@
         "x": 12,
         "y": 36
       },
-      "id": 13,
+      "id": 15,
       "options": {
         "legend": {
           "calcs": [
@@ -1165,233 +1356,7 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "Network I/O for rotator pods",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisLabel": "bytes/sec",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 10,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "vis": false
-            },
-            "lineInterpolation": "linear",
-            "lineWidth": 2,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "thresholds": {
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          },
-          "unit": "binBps"
-        },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byRegexp",
-              "options": ".*TX.*"
-            },
-            "properties": [
-              {
-                "id": "custom.transform",
-                "value": "negative-Y"
-              }
-            ]
-          }
-        ]
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 44
-      },
-      "id": 14,
-      "options": {
-        "legend": {
-          "calcs": [
-            "lastNotNull",
-            "mean"
-          ],
-          "displayMode": "table",
-          "placement": "bottom"
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "none"
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "expr": "rate(container_network_receive_bytes_total{pod=~\"rotator-.*\"}[1m])",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "legendFormat": "{{pod}} - RX",
-          "refId": "A"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "expr": "rate(container_network_transmit_bytes_total{pod=~\"rotator-.*\"}[1m])",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "legendFormat": "{{pod}} - TX",
-          "refId": "B"
-        }
-      ],
-      "title": "Pod Network I/O",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "description": "Disk I/O for rotator pods (important for log rotation performance)",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisLabel": "bytes/sec",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 10,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "vis": false
-            },
-            "lineInterpolation": "linear",
-            "lineWidth": 2,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "thresholds": {
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          },
-          "unit": "binBps"
-        },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byRegexp",
-              "options": ".*Write.*"
-            },
-            "properties": [
-              {
-                "id": "custom.transform",
-                "value": "negative-Y"
-              }
-            ]
-          }
-        ]
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 44
-      },
-      "id": 15,
-      "options": {
-        "legend": {
-          "calcs": [
-            "lastNotNull",
-            "mean"
-          ],
-          "displayMode": "table",
-          "placement": "bottom"
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "none"
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "expr": "rate(container_fs_reads_bytes_total{pod=~\"rotator-.*\"}[1m])",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "legendFormat": "{{pod}} - Read",
-          "refId": "A"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "expr": "rate(container_fs_writes_bytes_total{pod=~\"rotator-.*\"}[1m])",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "legendFormat": "{{pod}} - Write",
-          "refId": "B"
-        }
-      ],
-      "title": "Pod Disk I/O",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "description": "Key performance indicators for rotator service",
+      "description": "Critical performance and error summary",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1412,7 +1377,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "Error Rate"
+              "options": "Error Rate %"
             },
             "properties": [
               {
@@ -1425,11 +1390,11 @@
                     },
                     {
                       "color": "yellow",
-                      "value": 0.1
+                      "value": 1
                     },
                     {
                       "color": "red",
-                      "value": 1
+                      "value": 5
                     }
                   ]
                 }
@@ -1437,6 +1402,33 @@
               {
                 "id": "unit",
                 "value": "percent"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Failed Files (5m)"
+            },
+            "properties": [
+              {
+                "id": "thresholds",
+                "value": {
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    },
+                    {
+                      "color": "yellow",
+                      "value": 1
+                    },
+                    {
+                      "color": "red",
+                      "value": 5
+                    }
+                  ]
+                }
               }
             ]
           },
@@ -1470,37 +1462,6 @@
                 "value": "percentunit"
               }
             ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Avg Memory"
-            },
-            "properties": [
-              {
-                "id": "thresholds",
-                "value": {
-                  "steps": [
-                    {
-                      "color": "green",
-                      "value": null
-                    },
-                    {
-                      "color": "yellow",
-                      "value": 134217728
-                    },
-                    {
-                      "color": "red",
-                      "value": 268435456
-                    }
-                  ]
-                }
-              },
-              {
-                "id": "unit",
-                "value": "bytes"
-              }
-            ]
           }
         ]
       },
@@ -1508,7 +1469,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 52
+        "y": 44
       },
       "id": 16,
       "options": {
@@ -1543,7 +1504,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "expr": "sum(rate(rotator_rotations_total[5m])) * 300",
+          "expr": "sum(increase(rotator_rotations_total[5m]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Rotations (5m)",
@@ -1554,11 +1515,22 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
+          "expr": "sum(increase(rotator_errors_total[5m]))",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "Failed Files (5m)",
+          "refId": "C"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
           "expr": "sum(rate(rotator_errors_total[5m])) / sum(rate(rotator_scan_cycles_total[5m])) * 100",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "Error Rate",
-          "refId": "C"
+          "legendFormat": "Error Rate %",
+          "refId": "D"
         },
         {
           "datasource": {
@@ -1569,21 +1541,10 @@
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Avg CPU",
-          "refId": "D"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "expr": "avg(container_memory_working_set_bytes{pod=~\"rotator-.*\"})",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "legendFormat": "Avg Memory",
           "refId": "E"
         }
       ],
-      "title": "Key Performance Indicators",
+      "title": "Key Performance & Error Indicators",
       "type": "stat"
     }
   ],
@@ -1594,6 +1555,7 @@
     "rotator",
     "logging",
     "kubernetes",
+    "errors",
     "observability"
   ],
   "templating": {
@@ -1624,8 +1586,8 @@
   },
   "timepicker": {},
   "timezone": "",
-  "title": "Log Rotator - Comprehensive Monitoring Dashboard",
-  "uid": "rotator-monitoring",
+  "title": "Log Rotator - Production Dashboard with Error Tracking",
+  "uid": "rotator-production",
   "version": 1,
   "weekStart": ""
 }
