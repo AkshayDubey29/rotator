@@ -38,7 +38,7 @@ func main() {
 	defer stop()
 
 	disc := discover.New(cfg.Defaults.Discovery, cfg.Overrides)
-	pol := policy.New(cfg)
+	pol := policy.New(cfg, prom)
 	rot, err := engine.New(cfg, prom, log)
 	if err != nil {
 		log.WithError(err).Fatal("failed to init engine")
@@ -57,6 +57,7 @@ func main() {
 		case <-ticker.C:
 			prom.ScanCycles.Inc()
 			files := disc.Scan()
+			prom.FilesDiscovered.Set(float64(len(files)))
 			log.WithField("files_found", len(files)).Info("scan cycle")
 			for _, f := range files {
 				ns := f.Namespace

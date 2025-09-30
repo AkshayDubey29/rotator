@@ -14,6 +14,7 @@ type Registry struct {
 	NamespaceUsageBytes *prometheus.GaugeVec
 	OverridesApplied    *prometheus.CounterVec
 	ScanCycles          prometheus.Counter
+	FilesDiscovered     prometheus.Gauge
 	reg                 *prometheus.Registry
 }
 
@@ -44,9 +45,17 @@ func NewRegistry() *Registry {
 			Name: "rotator_scan_cycles_total",
 			Help: "Total number of scan cycles performed",
 		}),
+		FilesDiscovered: prometheus.NewGauge(prometheus.GaugeOpts{
+			Name: "rotator_files_discovered",
+			Help: "Current number of log files discovered",
+		}),
 		reg: r,
 	}
-	r.MustRegister(m.RotationsTotal, m.BytesRotatedTotal, m.ErrorsTotal, m.NamespaceUsageBytes, m.OverridesApplied, m.ScanCycles)
+	r.MustRegister(m.RotationsTotal, m.BytesRotatedTotal, m.ErrorsTotal, m.NamespaceUsageBytes, m.OverridesApplied, m.ScanCycles, m.FilesDiscovered)
+	
+	// Initialize metrics so they appear in /metrics endpoint
+	m.FilesDiscovered.Set(0)
+	
 	return m
 }
 

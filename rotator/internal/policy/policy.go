@@ -6,14 +6,16 @@ import (
 
 	"github.com/bmatcuk/doublestar/v4"
 	"github.com/tapasyadubey/log-rotate-util/rotator/internal/config"
+	"github.com/tapasyadubey/log-rotate-util/rotator/internal/metrics"
 )
 
 type Engine struct {
 	cfg *config.Config
+	m   *metrics.Registry
 }
 
-func New(cfg *config.Config) *Engine {
-	return &Engine{cfg: cfg}
+func New(cfg *config.Config, m *metrics.Registry) *Engine {
+	return &Engine{cfg: cfg, m: m}
 }
 
 // EffectivePolicy merges defaults -> namespace override -> path override
@@ -24,6 +26,7 @@ func (e *Engine) EffectivePolicy(namespace, fullPath string) config.PolicyConfig
 	if ns, ok := e.cfg.Overrides.Namespaces[namespace]; ok {
 		if ns.Policy != nil {
 			mergePolicy(&eff, ns.Policy)
+			e.m.OverridesApplied.WithLabelValues("namespace").Inc()
 		}
 	}
 
@@ -35,6 +38,7 @@ func (e *Engine) EffectivePolicy(namespace, fullPath string) config.PolicyConfig
 		}
 		if matchGlobs(p.Match, rel) {
 			mergePolicy(&eff, p.Policy)
+			e.m.OverridesApplied.WithLabelValues("path").Inc()
 			break
 		}
 	}
